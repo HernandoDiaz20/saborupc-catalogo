@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Prueba de Contrato - Catálogo</title>
+  <style>
+    body { font-family: sans-serif; }
+    .pass { color: green; }
+    .fail { color: red; }
+  </style>
+</head>
+<body>
+  <h1>Prueba de Contrato: Catálogo</h1>
+  <ul id="resultados"></ul>
+  <div id="test-root" style="display:none;"></div>
+
+  <!-- Cargar el MFE -->
+  <script src="catalogo.js"></script>
+  <script>
+    async function test() {
+      const res = document.getElementById('resultados');
+      function assert(cond, msg) {
+        const li = document.createElement('li');
+        li.textContent = (cond ? '✓ ' : '✗ ') + msg;
+        li.className = cond ? 'pass' : 'fail';
+        res.appendChild(li);
+        if (!cond) console.error('Fallo:', msg);
+      }
+
+      assert(typeof window.renderCatalogo === 'function', 'Expone window.renderCatalogo');
+      assert(typeof window.unmountCatalogo === 'function', 'Expone window.unmountCatalogo');
+
+      const root = document.getElementById('test-root');
+      
+      let eventoCapturado = null;
+      window.addEventListener('carrito:agregar', e => eventoCapturado = e.detail);
+
+      // Probar montaje
+      await window.renderCatalogo('test-root');
+      
+      // Esperar un poco a que Vue se monte
+      await new Promise(r => setTimeout(r, 800));
+      
+      assert(root.innerHTML.includes('cat-tarjeta'), 'El montaje genera contenido (tarjetas de platos)');
+
+      // Simular clic en agregar
+      const btn = root.querySelector('.cat-boton');
+      if (btn) {
+        btn.click();
+        assert(eventoCapturado !== null, 'Publica evento carrito:agregar al hacer clic');
+        if (eventoCapturado) {
+          assert(typeof eventoCapturado.id === 'number', 'Evento tiene id (number)');
+          assert(typeof eventoCapturado.nombre === 'string', 'Evento tiene nombre (string)');
+          assert(typeof eventoCapturado.precio === 'number', 'Evento tiene precio (number)');
+        }
+      } else {
+        assert(false, 'No se encontró botón para probar evento');
+      }
+
+      window.unmountCatalogo('test-root');
+      assert(root.innerHTML === '', 'El desmontaje limpia el contenedor');
+    }
+    
+    setTimeout(test, 500);
+  </script>
+</body>
+</html>
